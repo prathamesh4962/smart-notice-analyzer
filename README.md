@@ -20,7 +20,7 @@ The classifier is trained on 40 synthetic notices (five per category). In the cu
 
 - Windows, Python 3.11, and VS Code
 - Git for version control
-- Internet access to install packages and the spaCy English model
+- Internet access to install packages
 
 ## Setup and Run (PowerShell)
 
@@ -30,7 +30,6 @@ Open PowerShell in the project root (the folder containing `app.py`).
 py -3.11 -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install -r requirements.txt
-python -m spacy download en_core_web_sm
 python -m src.classifier
 python -m unittest discover -s tests -p "test_*.py"
 python -m streamlit run app.py
@@ -38,7 +37,7 @@ python -m streamlit run app.py
 
 Open the local URL printed by Streamlit, normally `http://localhost:8501`. Keep the Streamlit terminal open while using the app. Stop it with Ctrl+C in that terminal. If PowerShell blocks activation, run `Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope Process` and activate again.
 
-The classifier command reads `data/notices.csv` and saves `models/notice_classifier.joblib`. The spaCy model is a separate local download; it is not included in `requirements.txt`.
+The classifier command reads `data/notices.csv` and saves `models/notice_classifier.joblib`. The spaCy English model is pinned in `requirements.txt` so local and cloud installs use the same model version.
 
 ## Project Layout
 
@@ -69,6 +68,19 @@ docs/
 
 Run `python -m unittest discover -s tests -p "test_*.py"` from the project root with `.venv` active. The current suite has 18 tests covering preprocessing, PDF/TXT extraction, dates, ambiguous dates, action extraction, summaries, entities, and reports.
 
+## Deploy to Streamlit Community Cloud
+
+1. Commit and push the latest project files to the GitHub repository.
+2. Sign in to Streamlit Community Cloud with GitHub and choose **Create app**.
+3. Select repository `prathamesh4962/smart-notice-analyzer`, branch `main`, and main file path `app.py`.
+4. In advanced settings, select Python 3.11 to match the version used to create the model.
+5. Deploy and wait for the build logs to finish. Streamlit Cloud installs `requirements.txt`; the dataset and trained model are already committed in `data/` and `models/`.
+6. Open the generated app URL and test the sample notice, a PDF/TXT upload, the extracted dates and entities, and report download.
+
+No API keys or Streamlit secrets are required. If the repository is private, grant Streamlit Community Cloud access to it through GitHub.
+
+If deployment fails, inspect the build logs first. For a missing spaCy model, confirm the pinned `en-core-web-sm` wheel is in `requirements.txt`. For a missing classifier, confirm `models/notice_classifier.joblib` is committed. Keep the pinned scikit-learn version aligned with the version used to train the saved model.
+
 ## GitHub
 
 Initialize and review the repository from the project root:
@@ -85,10 +97,10 @@ Create an empty repository on GitHub named `smart-notice-analyzer` (do not initi
 
 ```powershell
 git branch -M main
-git remote add origin https://github.com/YOUR-USERNAME/smart-notice-analyzer.git
+git remote add origin https://github.com/prathamesh4962/smart-notice-analyzer.git
 git push -u origin main
 ```
 
-Replace `YOUR-USERNAME` with your GitHub username. Authenticate through Git Credential Manager or the browser prompt; never put a password, token, or secret in project files or chat. The `.gitignore` excludes the virtual environment and common local secrets, while keeping the dataset and trained model available for deployment.
+Authenticate through Git Credential Manager or the browser prompt; never put a password, token, or secret in project files or chat. The `.gitignore` excludes the virtual environment and common local secrets, while keeping the dataset and trained model available for deployment.
 
 See [docs/troubleshooting.md](docs/troubleshooting.md) for common setup and runtime fixes.
