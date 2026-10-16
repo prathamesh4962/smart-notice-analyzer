@@ -1,20 +1,13 @@
+import os
 from datetime import datetime
-from pathlib import Path
 
-import joblib
 import streamlit as st
 
-from src.action_extractor import extract_action_items
-from src.classifier import MODEL_PATH
-from src.date_extractor import extract_dates
-from src.entity_extractor import extract_entities
+from src.api_client import BackendAPIError, analyze_notice_via_api
 from src.pdf_extractor import extract_notice_text
 from src.preprocessing import clean_text
-from src.report_generator import generate_report
-from src.summarizer import summarize_text
 
 
-PROJECT_ROOT = Path(__file__).resolve().parent
 SAMPLE_NOTICE = (
     "The campus placement registration portal is open for final-year students. "
     "Complete your profile and upload your resume by 24 October 2026 to participate "
@@ -151,42 +144,12 @@ def clear_history() -> None:
     st.session_state["analysis_history"] = []
 
 
-def analyze_notice(notice_text: str) -> dict[str, object]:
-    if not MODEL_PATH.exists():
-        raise FileNotFoundError(
-            "The classifier model is missing. Train it with 'python -m src.classifier'."
-        )
-
-    pipeline = joblib.load(MODEL_PATH)
-    classifier = pipeline.named_steps["classifier"]
-    probabilities = pipeline.predict_proba([notice_text])[0]
-    predicted_index = int(probabilities.argmax())
-    category = str(classifier.classes_[predicted_index])
-    probability = float(probabilities[predicted_index])
-    summary = summarize_text(notice_text)
-    dates = extract_dates(notice_text)
-    entities = extract_entities(notice_text)
-    actions = extract_action_items(notice_text)
-    report = generate_report(
-        original_text=notice_text,
-        category=category,
-        estimated_probability=probability,
-        summary=summary,
-        dates=dates,
-        entities=entities,
-        action_items=actions,
-    )
-
-    return {
-        "original_text": notice_text,
-        "category": category,
-        "estimated_probability": probability,
-        "summary": summary,
-        "dates": dates,
-        "entities": entities,
-        "action_items": actions,
-        "report": report,
-    }
+def get_api_base_url() -> str:
+    try:
+        configured_url = st.secrets.get("NOTICE_API_URL")
+    except FileNotFoundError:
+        configured_url = None
+    return str(configured_url or os.getenv("NOTICE_API_URL") or "http://127.0.0.1:8000")
 
 
 with st.sidebar:
@@ -271,7 +234,7 @@ if analyze_clicked:
             st.error("Enter notice text or upload a readable PDF/TXT file first.")
         else:
             with st.spinner("Analyzing notice..."):
-                result = analyze_notice(source_text)
+                result = analyze_notice_via_api(source_text, get_api_base_url())
             st.session_state["analysis_result"] = result
             st.session_state["analysis_history"].insert(
                 0,
@@ -282,7 +245,7 @@ if analyze_clicked:
                 },
             )
             st.session_state["analysis_history"] = st.session_state["analysis_history"][:10]
-    except (FileNotFoundError, RuntimeError, ValueError, OSError) as error:
+    except (BackendAPIError, ValueError, OSError) as error:
         st.error(str(error))
 
 result = st.session_state["analysis_result"]

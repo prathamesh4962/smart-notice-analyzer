@@ -32,10 +32,17 @@ py -3.11 -m venv .venv
 python -m pip install -r requirements.txt
 python -m src.classifier
 python -m unittest discover -s tests -p "test_*.py"
+python -m uvicorn backend.main:app --reload --port 8000
+```
+
+In a second PowerShell terminal, start the Streamlit interface:
+
+```powershell
+.\.venv\Scripts\Activate.ps1
 python -m streamlit run app.py
 ```
 
-Open the local URL printed by Streamlit, normally `http://localhost:8501`. Keep the Streamlit terminal open while using the app. Stop it with Ctrl+C in that terminal. If PowerShell blocks activation, run `Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope Process` and activate again.
+The API is available at `http://127.0.0.1:8000`. Check `http://127.0.0.1:8000/docs` for interactive API documentation and `http://127.0.0.1:8000/health` for its health check. The Streamlit UI calls `POST /api/analyze` on that API. Locally, it defaults to `http://127.0.0.1:8000`; set `NOTICE_API_URL` to change the backend address. Keep both terminals running. Stop each process with Ctrl+C in its terminal. If PowerShell blocks activation, run `Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope Process` and activate again.
 
 The classifier command reads `data/notices.csv` and saves `models/notice_classifier.joblib`. The spaCy English model is pinned in `requirements.txt` so local and cloud installs use the same model version.
 
@@ -43,12 +50,16 @@ The classifier command reads `data/notices.csv` and saves `models/notice_classif
 
 ```text
 app.py
+backend/
+  main.py
 requirements.txt
 .gitignore
 README.md
 data/notices.csv
 models/notice_classifier.joblib
 src/
+  analysis_service.py
+  api_client.py
   action_extractor.py
   classifier.py
   date_extractor.py
@@ -70,16 +81,26 @@ Run `python -m unittest discover -s tests -p "test_*.py"` from the project root 
 
 ## Deploy to Streamlit Community Cloud
 
-1. Commit and push the latest project files to the GitHub repository.
-2. Sign in to Streamlit Community Cloud with GitHub and choose **Create app**.
+The Streamlit UI and FastAPI service are separate processes. Deploy the API first to a Python hosting service that supports long-running ASGI apps. Configure its start command as:
+
+```text
+uvicorn backend.main:app --host 0.0.0.0 --port $PORT
+```
+
+Ensure the API deployment includes this repository's `data/` and `models/` directories and installs `requirements.txt`. Confirm its `/health` endpoint responds before connecting the UI.
+
+Then deploy the Streamlit frontend:
+
+1. Commit and push the latest project files to GitHub.
+2. In Streamlit Community Cloud choose **Create app**.
 3. Select repository `prathamesh4962/smart-notice-analyzer`, branch `main`, and main file path `app.py`.
-4. In advanced settings, select Python 3.11 to match the version used to create the model.
-5. Deploy and wait for the build logs to finish. Streamlit Cloud installs `requirements.txt`; the dataset and trained model are already committed in `data/` and `models/`.
-6. Open the generated app URL and test the sample notice, a PDF/TXT upload, the extracted dates and entities, and report download.
+4. In advanced settings, select Python 3.11.
+5. In the app's **Secrets** settings, configure `NOTICE_API_URL` to the public base URL of the deployed API, for example `NOTICE_API_URL = "https://your-api.example.com"` (no `/api/analyze` suffix).
+6. Deploy and test notice analysis, PDF/TXT upload, extracted dates and entities, and report download.
 
-No API keys or Streamlit secrets are required. If the repository is private, grant Streamlit Community Cloud access to it through GitHub.
+The API base URL is not a secret, but Streamlit Secrets provides a straightforward setting for the frontend. If the repository is private, grant Streamlit Community Cloud access to it through GitHub.
 
-If deployment fails, inspect the build logs first. For a missing spaCy model, confirm the pinned `en-core-web-sm` wheel is in `requirements.txt`. For a missing classifier, confirm `models/notice_classifier.joblib` is committed. Keep the pinned scikit-learn version aligned with the version used to train the saved model.
+If deployment fails, inspect the build logs first. For API connection errors, verify `NOTICE_API_URL` and that the API service is running and publicly reachable. For a missing spaCy model, confirm the pinned `en-core-web-sm` wheel is in `requirements.txt`. For a missing classifier, confirm `models/notice_classifier.joblib` is committed. Keep the pinned scikit-learn version aligned with the version used to train the saved model.
 
 ## GitHub
 

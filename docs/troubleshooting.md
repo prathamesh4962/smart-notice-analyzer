@@ -27,6 +27,9 @@ Run project commands from `D:\NLP MICROPROJECT\smart-notice-analyzer`. In PowerS
 ## Streamlit and application behavior
 
 - **Streamlit is not found:** Activate `.venv`, move to the project root, and run `python -m streamlit run app.py`.
+- **Streamlit reports it cannot connect to the analysis API:** Start the backend in a separate terminal with `python -m uvicorn backend.main:app --reload --port 8000`. If it is deployed elsewhere, set `NOTICE_API_URL` to its base URL in the Streamlit environment or Secrets.
+- **The API server is not found:** Install dependencies with `python -m pip install -r requirements.txt`, then start it from the project root with `python -m uvicorn backend.main:app --reload --port 8000`.
+- **The API health check fails:** Open `http://127.0.0.1:8000/health` while the backend is running. API docs are at `http://127.0.0.1:8000/docs`.
 - **Port 8501 is already in use:** Start the app on another port with `python -m streamlit run app.py --server.port 8502`.
 - **The `code` command or a pasted path causes a PowerShell parser error:** These commands do not need `code` or `&`. Enter only the command shown, without copying terminal output or an extra file path.
 - **A category prediction is wrong or has a low estimated probability:** This is expected with the small synthetic dataset. The measured 20% holdout accuracy is not reliable real-world performance. Add more diverse, correctly labeled notices before drawing conclusions; do not report an inflated accuracy.
