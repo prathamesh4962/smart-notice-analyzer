@@ -21,22 +21,108 @@ SAMPLE_NOTICE = (
     "in company recruitment drives. The placement office is in Block A."
 )
 
-st.set_page_config(page_title="Smart Notice Analyzer", layout="wide")
+st.set_page_config(
+    page_title="Smart Notice Analyzer",
+    layout="wide",
+    initial_sidebar_state="collapsed",
+)
 st.markdown(
     """
     <style>
-    [data-testid="stAppViewContainer"] { background: #f4f7f5; }
-    [data-testid="stHeader"] { background: transparent; }
-    [data-testid="stSidebar"] { background: #edf2ef; }
-    .block-container { max-width: 1280px; padding-top: 1.7rem; padding-bottom: 3rem; }
-    h1, h2, h3 { color: #183b36; }
-    [data-testid="stMetric"] {
-        background: #ffffff;
-        border-top: 3px solid #237666;
-        padding: 0.8rem 1rem;
+    :root {
+        color-scheme: light;
+        --ink: #172033;
+        --brand: #176b5b;
+        --border: #dce4ec;
     }
+    [data-testid="stAppViewContainer"] {
+        background: #f4f7fb;
+        color: var(--ink);
+    }
+    [data-testid="stHeader"] { background: transparent; }
+    [data-testid="stSidebar"] { background: #edf2f7; }
+    .block-container {
+        max-width: 1080px;
+        padding-top: 2rem;
+        padding-bottom: 3rem;
+    }
+    h1, h2, h3, p, label, [data-testid="stWidgetLabel"],
+    [data-testid="stCaptionContainer"], [data-testid="stMarkdownContainer"] {
+        color: var(--ink) !important;
+    }
+    h1, h2, h3 { letter-spacing: -0.02em; }
+    .hero {
+        padding: 1.8rem 2rem;
+        margin-bottom: 1.7rem;
+        border: 1px solid #d9e7e4;
+        border-radius: 18px;
+        background: linear-gradient(120deg, #e7f4f0 0%, #f7fafc 72%);
+    }
+    .hero .eyebrow {
+        margin: 0 0 0.45rem;
+        color: #176b5b;
+        font-size: 0.78rem;
+        font-weight: 700;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+    }
+    .hero h1 {
+        margin: 0;
+        color: #172033 !important;
+        font-size: clamp(2rem, 4vw, 2.7rem);
+        line-height: 1.15;
+    }
+    .hero p {
+        max-width: 680px;
+        margin: 0.65rem 0 0;
+        color: #48566b !important;
+        font-size: 1.03rem;
+    }
+    [data-testid="stVerticalBlockBorderWrapper"] {
+        border-color: var(--border);
+        border-radius: 14px;
+        background: #fff;
+    }
+    textarea, input {
+        color: var(--ink) !important;
+        background: #fff !important;
+        border-color: #cbd5e1 !important;
+    }
+    textarea::placeholder { color: #738095 !important; opacity: 1; }
+    [data-testid="stMetric"] {
+        min-height: 112px;
+        border: 1px solid var(--border);
+        border-top: 3px solid var(--brand);
+        border-radius: 12px;
+        background: #fff;
+        padding: 0.8rem 1rem;
+        box-shadow: 0 2px 8px rgba(23, 32, 51, 0.04);
+    }
+    [data-testid="stMetricLabel"], [data-testid="stMetricValue"] {
+        color: var(--ink) !important;
+    }
+    [data-testid="stBaseButton-primary"] {
+        border-color: var(--brand);
+        background: var(--brand);
+        color: #fff;
+        font-weight: 650;
+    }
+    [data-testid="stBaseButton-primary"]:hover {
+        border-color: #105347;
+        background: #105347;
+        color: #fff;
+    }
+    [data-testid="stDataFrame"] { border: 1px solid var(--border); }
+    [data-testid="stSidebar"] p,
+    [data-testid="stSidebar"] label,
+    [data-testid="stSidebar"] [data-testid="stCaptionContainer"] {
+        color: var(--ink) !important;
+    }
+    [data-testid="stSidebar"] h2,
+    [data-testid="stSidebar"] h3 { color: var(--ink) !important; }
     @media (max-width: 640px) {
-        .block-container { padding-left: 1rem; padding-right: 1rem; }
+        .block-container { padding: 1rem 0.8rem 2rem; }
+        .hero { padding: 1.35rem 1.2rem; }
         [data-testid="stMetric"] { padding: 0.65rem 0.75rem; }
     }
     </style>
@@ -104,18 +190,9 @@ def analyze_notice(notice_text: str) -> dict[str, object]:
 
 
 with st.sidebar:
-    st.header("Notice workspace")
-    input_mode = st.radio(
-        "Input method",
-        options=("Paste text", "Upload PDF/TXT"),
-        horizontal=True,
-        key="input_mode",
-    )
-    st.button("Load sample notice", on_click=load_sample, use_container_width=True)
-    st.button("Clear current notice", on_click=reset_current_notice, use_container_width=True)
-
+    st.header("Your session")
     st.divider()
-    st.subheader("Session history")
+    st.subheader("Recent analyses")
     history = st.session_state["analysis_history"]
     if history:
         st.button("Clear history", on_click=clear_history, use_container_width=True)
@@ -123,28 +200,64 @@ with st.sidebar:
             st.caption(f"{item['timestamp']} · {item['category']}")
             st.write(item["summary"])
     else:
-        st.caption("Analyzed notices will appear here during this session.")
+        st.caption("Your analyzed notices will appear here until you close this session.")
 
-st.title("Smart Notice Analyzer")
-st.caption("Extract useful details from college notices.")
+st.markdown(
+    """
+    <div class="hero">
+        <p class="eyebrow">College notice assistant</p>
+        <h1>Smart Notice Analyzer</h1>
+        <p>Turn long notices into clear summaries, important dates, and practical next steps.</p>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
+st.subheader("1. Add a notice")
+st.caption("Paste the notice text or upload a PDF/TXT file to get started.")
 
 uploaded_file = None
-if input_mode == "Paste text":
-    notice_text = st.text_area(
-        "Notice text",
-        key="notice_text",
-        height=220,
-        placeholder="Paste a college notice here...",
+with st.container(border=True):
+    input_mode = st.radio(
+        "Choose an input method",
+        options=("Paste text", "Upload PDF/TXT"),
+        horizontal=True,
+        key="input_mode",
     )
-else:
-    uploaded_file = st.file_uploader(
-        "Upload a PDF or TXT notice",
-        type=("pdf", "txt"),
-        key=f"notice_upload_{st.session_state['upload_generation']}",
+    sample_column, clear_column = st.columns([1, 1])
+    sample_column.button(
+        "Try a sample notice",
+        on_click=load_sample,
+        use_container_width=True,
     )
-    notice_text = ""
+    clear_column.button(
+        "Clear notice",
+        on_click=reset_current_notice,
+        use_container_width=True,
+    )
 
-analyze_clicked = st.button("Analyze notice", type="primary", use_container_width=True)
+    if input_mode == "Paste text":
+        notice_text = st.text_area(
+            "Notice text",
+            key="notice_text",
+            height=220,
+            placeholder="Paste the full college notice here...",
+            help="Include the complete notice for the most useful summary and extracted details.",
+        )
+    else:
+        uploaded_file = st.file_uploader(
+            "Choose a PDF or TXT notice",
+            type=("pdf", "txt"),
+            key=f"notice_upload_{st.session_state['upload_generation']}",
+            help="Text-based PDFs are supported. Scanned image PDFs are not.",
+        )
+        notice_text = ""
+
+    analyze_clicked = st.button(
+        "Analyze notice",
+        type="primary",
+        use_container_width=True,
+    )
+
 if analyze_clicked:
     try:
         if input_mode == "Paste text":
@@ -175,7 +288,7 @@ if analyze_clicked:
 result = st.session_state["analysis_result"]
 if result:
     st.divider()
-    st.subheader("Analysis")
+    st.subheader("2. Your analysis")
 
     category_column, score_column, dates_count_column, actions_count_column = st.columns(4)
     category_column.metric("Predicted category", result["category"])
